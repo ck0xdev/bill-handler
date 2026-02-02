@@ -1,4 +1,4 @@
-export default function HistoryModal({ isOpen, onClose, date, transactions }) {
+export default function HistoryModal({ isOpen, onClose, selectedDate, onDateChange, transactions }) {
   if (!isOpen) return null
 
   const total = transactions.reduce((sum, t) => sum + (t.paid_amount || 0), 0)
@@ -7,22 +7,35 @@ export default function HistoryModal({ isOpen, onClose, date, transactions }) {
     <div className="modal" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <span className="close-btn" onClick={onClose}>&times;</span>
-        <h2>Daily Collection</h2>
-        <p style={{color:'#666', fontSize:'0.9rem', marginBottom: '15px'}}>
-          Date: <strong>{date}</strong>
-        </p>
+        <h2>Collection History</h2>
+        
+        {/* Date Picker */}
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: '0.9rem', color: '#666' }}>Select Date:</label>
+          <input 
+            type="date" 
+            className="input-field" 
+            style={{ margin: '5px 0 0 0', padding: '10px' }}
+            value={selectedDate}
+            onChange={(e) => onDateChange(e.target.value)}
+          />
+        </div>
         
         <div className="history-list">
           {transactions.length === 0 ? (
-            <p style={{textAlign:'center', padding:20, color:'#999'}}>No payments received today.</p>
+            <p style={{textAlign:'center', padding:20, color:'#999'}}>
+              No payments found for this date.
+            </p>
           ) : (
             transactions.map(t => (
               <div key={t.id} className="history-item">
                 <div style={{display:'flex', flexDirection:'column'}}>
                   <span>{t.customers?.name || 'Unknown'}</span>
-                  <small style={{color:'#999'}}>Bill #{t.bill_no}</small>
+                  <small style={{color:'#999'}}>
+                    {t.bill_no === 'PAY' ? 'Direct Payment' : `Bill #${t.bill_no}`}
+                  </small>
                 </div>
-                <span className="history-amount">+₹{t.paid_amount}</span>
+                <span className="history-amount">+₹{t.paid_amount.toLocaleString()}</span>
               </div>
             ))
           )}

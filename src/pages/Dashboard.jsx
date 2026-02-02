@@ -10,15 +10,17 @@ import PaymentModal from '../components/Modals/PaymentModal'
 import HistoryModal from '../components/Modals/HistoryModal'
 
 export default function Dashboard() {
-  // FIX 1: Load day from LocalStorage so it stays selected on reload
+  // Day Scroller State
   const [currentDay, setCurrentDay] = useState(() => {
     return localStorage.getItem('bill_handler_day') || 'Mon'
   })
   
+  // History Date State (Defaults to Today)
+  const [historyDate, setHistoryDate] = useState(new Date().toISOString().split('T')[0])
+  
   const [customers, setCustomers] = useState([])
   const [bills, setBills] = useState([])
   
-  // Daily Collection State
   const [dailyTransactions, setDailyTransactions] = useState([])
   const [showHistory, setShowHistory] = useState(false)
 
@@ -30,23 +32,29 @@ export default function Dashboard() {
   const [editingCustomer, setEditingCustomer] = useState(null)
   const [selectedCustomer, setSelectedCustomer] = useState(null)
 
+  // 1. Effect for Route Data (Customers/Bills)
   useEffect(() => {
     localStorage.setItem('bill_handler_day', currentDay)
-    fetchData()
+    fetchRouteData()
     
-    const subscription = supabase
-      .channel('public:data')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bills' }, fetchData)
+    const sub = supabase.channel('public:data')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, fetchRouteData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bills' }, () => {
+        fetchRouteData()
+        fetchHistoryData() // Refresh history too if bills change
+      })
       .subscribe()
 
-    return () => { subscription.unsubscribe() }
+    return () => { sub.unsubscribe() }
   }, [currentDay])
 
-  async function fetchData() {
+  // 2. Effect for History Data (Updates when Date changes)
+  useEffect(() => {
+    fetchHistoryData()
+  }, [historyDate])
+
+  async function fetchRouteData() {
     setLoading(true)
-    
-    // 1. Fetch Customers
     const { data: customersData } = await supabase
       .from('customers')
       .select('*')
@@ -54,7 +62,6 @@ export default function Dashboard() {
       .order('sr_no', { ascending: true })
     setCustomers(customersData || [])
     
-    // 2. Fetch Bills
     if (customersData && customersData.length > 0) {
       const ids = customersData.map(c => c.id)
       const { data: billsData } = await supabase.from('bills').select('*').in('customer_id', ids)
@@ -62,18 +69,18 @@ export default function Dashboard() {
     } else {
       setBills([])
     }
+    setLoading(false)
+  }
 
-    // 3. Fetch Today's Payments
-    const today = new Date().toISOString().split('T')[0]
-    const { data: historyData } = await supabase
+  // New Separate Function for History
+  async function fetchHistoryData() {
+    const { data } = await supabase
       .from('bills')
       .select('*, customers(name)')
-      .eq('date', today)
+      .eq('date', historyDate) // Uses the selected history date
       .gt('paid_amount', 0)
     
-    setDailyTransactions(historyData || [])
-
-    setLoading(false)
+    setDailyTransactions(data || [])
   }
 
   const getPendingAmount = (customerId) => {
@@ -83,6 +90,8 @@ export default function Dashboard() {
   }
 
   const totalPending = customers.reduce((sum, c) => sum + getPendingAmount(c.id), 0)
+  
+  // Calculate Total for the *Selected History Date*
   const totalCollected = dailyTransactions.reduce((sum, t) => sum + (t.paid_amount || 0), 0)
 
   const filteredCustomers = customers.filter(c => 
@@ -117,18 +126,13 @@ export default function Dashboard() {
   return (
     <div>
       <Header>
-        {/* BUTTON 1: Today's Payment */}
-        <button className="btn-small" onClick={() => setShowHistory(true)} style={{ background: '#28a745' }} title="View Today's Collection">
-          💰 <span className="btn-text">Payments</span>
+        <button className="btn-small" onClick={() => setShowHistory(true)} style={{ background: '#28a745' }}>
+          💰 <span className="btn-text">Payment</span>
         </button>
-
-        {/* BUTTON 2: Export */}
-        <button className="btn-small" onClick={exportToExcel} style={{ background: '#667eea' }} title="Export to Excel">
+        <button className="btn-small" onClick={exportToExcel} style={{ background: '#667eea' }}>
           📊 <span className="btn-text">Export</span>
         </button>
-
-        {/* BUTTON 3: Refresh */}
-        <button className="btn-small" onClick={() => window.location.reload()} style={{ background: '#333' }} title="Reload App">
+        <button className="btn-small" onClick={() => window.location.reload()} style={{ background: '#333' }}>
           🔄 <span className="btn-text">Refresh</span>
         </button>
       </Header>
@@ -140,6 +144,7 @@ export default function Dashboard() {
       </div>
 
       <div className="container" style={{ paddingBottom: 80 }}>
+        {/* Note: 'collected' here now shows the total for the SELECTED history date, usually today */}
         <Stats count={filteredCustomers.length} pending={totalPending} collected={totalCollected} />
         
         {loading ? (
@@ -179,11 +184,10 @@ export default function Dashboard() {
 
       <button className="fab-btn" onClick={handleAddNew}>+</button>
       
-      {/* Modals */}
       <AddCustomerModal 
         isOpen={showModal} 
         onClose={() => setShowModal(false)} 
-        onSuccess={fetchData} 
+        onSuccess={fetchRouteData} 
         editCustomer={editingCustomer} 
         defaultDay={currentDay}
       />
@@ -191,15 +195,16 @@ export default function Dashboard() {
       <PaymentModal 
         isOpen={showPayModal}
         onClose={() => setShowPayModal(false)}
-        onSuccess={fetchData}
+        onSuccess={() => { fetchRouteData(); fetchHistoryData(); }}
         customer={selectedCustomer}
       />
 
       <HistoryModal 
         isOpen={showHistory}
         onClose={() => setShowHistory(false)}
-        date={new Date().toLocaleDateString('en-GB')}
         transactions={dailyTransactions}
+        selectedDate={historyDate}
+        onDateChange={setHistoryDate}
       />
     </div>
   )
