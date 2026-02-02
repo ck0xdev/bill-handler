@@ -37,22 +37,20 @@ h1 { margin: 0; font-size: 1.4rem; font-weight: 600; }
   align-items: center;
 }
 
-/* Day Scroller */
-/* Day Scroller */
+/* Day Scroller - High Contrast */
 .day-scroller { 
   display: flex; 
   overflow-x: auto; 
   margin-top: 15px; 
   gap: 8px; 
   padding-bottom: 5px; 
-  padding-left: 15px; /* Add padding so first item isn't cut off */
+  padding-left: 15px;
   padding-right: 15px;
 }
-
 .day-btn { 
   background: white; 
-  border: 1px solid #667eea; /* Purple border */
-  color: #667eea; /* Purple text */
+  border: 1px solid #667eea; 
+  color: #667eea; 
   padding: 8px 20px; 
   border-radius: 20px; 
   white-space: nowrap; 
@@ -62,18 +60,14 @@ h1 { margin: 0; font-size: 1.4rem; font-weight: 600; }
   transition: all 0.3s ease;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
-
-.day-btn:hover {
-  background: #f0f0ff;
-}
-
+.day-btn:hover { background: #f0f0ff; }
 .day-btn.active { 
-  background: #667eea; /* Solid purple color */
+  background: #667eea; 
   color: white; 
-  font-weight: 800; /* Extra bold */
-  border: 2px solid #5a67d8; /* Darker border for definition */
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5); /* Glow effect */
-  transform: scale(1.05); /* Slightly larger */
+  font-weight: 800; 
+  border: 2px solid #5a67d8; 
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5); 
+  transform: scale(1.05); 
 }
 
 /* Search */
@@ -185,6 +179,9 @@ tr:hover { background-color: #f8f9fa; }
   cursor: pointer; 
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 .fab-btn { 
   position: fixed; 
@@ -366,33 +363,30 @@ label {
   to {transform: translateY(0); opacity: 1;} 
 }
 
-/* Responsive */
 /* Responsive Styles for Mobile */
 @media (max-width: 480px) {
   /* 1. Header Layout */
   .top-bar {
-    gap: 10px; /* Space between Title and Buttons */
+    gap: 10px;
   }
-  
   h1 {
-    font-size: 1.2rem; /* Slightly smaller title to fit */
+    font-size: 1.2rem;
     white-space: nowrap;
   }
 
-  /* 2. Optimize Buttons for Touch */
+  /* 2. Optimize Buttons for Touch (Icon only) */
   .header-actions {
     gap: 8px;
   }
-  
-  .btn-text {
-    display: none; /* Hide text on mobile */
+  .header-actions .btn-text {
+    display: none; /* Hide text in navbar */
   }
-  
-  .btn-small {
-    padding: 10px 12px; /* Square-ish shape */
-    font-size: 1.2rem; /* Larger icon for easy tapping */
-    display: flex;
-    align-items: center;
+  .header-actions .btn-small {
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.2rem;
     justify-content: center;
   }
 
@@ -405,5 +399,15 @@ label {
   /* 4. Fix Amount Sizes */
   .amount-red, .amount-green { 
     font-size: 2rem; 
+  }
+  
+  /* 5. Keep Empty State Button Normal */
+  .empty-state .btn-small {
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+    padding: 12px 24px;
+    margin-top: 15px;
+    display: inline-flex;
   }
 }

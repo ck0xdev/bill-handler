@@ -96,7 +96,6 @@ export default function Details() {
   return (
     <div>
       <Header title={customer.name} />
-      
       <div className="details-header" style={{ marginTop: -60, paddingTop: 80 }}>
         <div className="meta-info" style={{ marginTop: 10 }}>
           <span>Sr: {customer.sr_no}</span> | 
@@ -106,7 +105,6 @@ export default function Details() {
           </span>
         </div>
       </div>
-
       <div className="summary-card">
         <h3>Total Pending Amount</h3>
         <h1 className={totalPending > 0 ? 'amount-red' : 'amount-green'} style={{ fontSize: '2.5rem' }}>
@@ -118,7 +116,6 @@ export default function Details() {
           </p>
         )}
       </div>
-
       <div className="container">
         <div className="section-header">
           <h3>Bill History</h3>
@@ -131,7 +128,6 @@ export default function Details() {
             </button>
           </div>
         </div>
-
         {bills.length === 0 ? (
           <div className="empty-state">No bills yet. Add your first bill!</div>
         ) : (
@@ -140,7 +136,6 @@ export default function Details() {
           ))
         )}
       </div>
-
       <BillModal 
         isOpen={showModal}
         onClose={handleCloseModal}

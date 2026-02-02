@@ -10,7 +10,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }) {
   })
   const [loading, setLoading] = useState(false)
 
-  // Define the mapping for display vs value
+  // Full names for dropdown
   const days = [
     { value: 'Mon', label: 'Monday' },
     { value: 'Tue', label: 'Tuesday' },
@@ -33,7 +33,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }) {
         name: formData.name,
         mobile: formData.mobile,
         route_day: formData.route_day,
-        sr_no: parseInt(formData.sr_no)
+        sr_no: parseInt(formData.sr_no) || 0
       }])
 
     setLoading(false)
@@ -61,9 +61,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }) {
             required
           >
             {days.map(day => (
-              <option key={day.value} value={day.value}>
-                {day.label}
-              </option>
+              <option key={day.value} value={day.value}>{day.label}</option>
             ))}
           </select>
           

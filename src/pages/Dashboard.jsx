@@ -138,18 +138,13 @@ export default function Dashboard() {
   return (
     <div>
       <Header>
-        {/* Export Button */}
-        <button className="btn-small" onClick={exportToExcel} style={{ background: '#667eea' }} title="Export to Excel">
+        <button className="btn-small" onClick={exportToExcel} style={{ background: '#667eea' }}>
           📊 <span className="btn-text">Export</span>
         </button>
-        
-        {/* Backup Button */}
-        <button className="btn-small" onClick={backupData} title="Backup Data">
+        <button className="btn-small" onClick={backupData}>
           💾 <span className="btn-text">Backup</span>
         </button>
-        
-        {/* Restore Button */}
-        <label className="btn-small" style={{ cursor: 'pointer' }} title="Restore Data">
+        <label className="btn-small" style={{ cursor: 'pointer' }}>
           🔄 <span className="btn-text">Restore</span>
           <input type="file" style={{ display: 'none' }} onChange={restoreData} accept=".json" />
         </label>
