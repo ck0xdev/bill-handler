@@ -8,7 +8,7 @@ import CustomerCard from '../components/CustomerCard'
 import AddCustomerModal from '../components/Modals/AddCustomerModal'
 
 export default function Dashboard() {
-  // FIX 1: Initialize state from LocalStorage so it remembers the day on reload
+  // FIX 1: Load day from LocalStorage (Memory) so it never resets to Mon automatically
   const [currentDay, setCurrentDay] = useState(() => {
     return localStorage.getItem('bill_handler_day') || 'Mon'
   })
@@ -18,25 +18,21 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
-  
-  // New state for editing
   const [editingCustomer, setEditingCustomer] = useState(null)
 
   useEffect(() => {
-    // FIX 1: Save day to LocalStorage whenever it changes
+    // FIX 2: Save the day whenever it changes
     localStorage.setItem('bill_handler_day', currentDay)
     
     fetchData()
     
     const subscription = supabase
-      .channel('customers-channel')
+      .channel('public:data')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bills' }, fetchData)
       .subscribe()
 
-    return () => {
-      subscription.unsubscribe()
-    }
+    return () => { subscription.unsubscribe() }
   }, [currentDay])
 
   async function fetchData() {
@@ -63,8 +59,9 @@ export default function Dashboard() {
   }
 
   const getPendingAmount = (customerId) => {
-    const customerBills = bills.filter(b => b.customer_id === customerId)
-    return customerBills.reduce((sum, b) => sum + (parseFloat(b.total_amount) - parseFloat(b.paid_amount)), 0)
+    return bills
+      .filter(b => b.customer_id === customerId)
+      .reduce((sum, b) => sum + (parseFloat(b.total_amount) - parseFloat(b.paid_amount)), 0)
   }
 
   const totalPending = customers.reduce((sum, c) => sum + getPendingAmount(c.id), 0)
@@ -74,59 +71,23 @@ export default function Dashboard() {
     (c.mobile && c.mobile.includes(searchTerm))
   )
 
-  // FIX 2: Handler to open modal with customer data
   const handleEditCustomer = (customer) => {
     setEditingCustomer(customer)
     setShowModal(true)
   }
 
   const handleAddNew = () => {
-    setEditingCustomer(null) // Clear edit data for new entry
+    setEditingCustomer(null)
     setShowModal(true)
   }
 
-  // ... (Export, Backup, Restore functions remain the same) ...
-  const exportToExcel = async () => {
-    const allCustomers = await supabase.from('customers').select('*')
-    const allBills = await supabase.from('bills').select('*')
-    const data = allCustomers.data.map(c => {
-      const custBills = allBills.data.filter(b => b.customer_id === c.id)
-      const pending = custBills.reduce((sum, b) => sum + (parseFloat(b.total_amount) - parseFloat(b.paid_amount)), 0)
-      return { 'Serial': c.sr_no, 'Name': c.name, 'Mobile': c.mobile, 'Route': c.route_day, 'Pending': pending }
-    })
-    const ws = XLSX.utils.json_to_sheet(data)
+  const exportToExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(customers.map(c => ({
+      Serial: c.sr_no, Name: c.name, Mobile: c.mobile, Pending: getPendingAmount(c.id)
+    })))
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Customers")
-    XLSX.writeFile(wb, `Route_Report_${new Date().toISOString().split('T')[0]}.xlsx`)
-  }
-
-  const backupData = async () => {
-    const { data: cust } = await supabase.from('customers').select('*')
-    const { data: bill } = await supabase.from('bills').select('*')
-    const backup = { customers: cust, bills: bill, date: new Date().toISOString() }
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup))
-    const downloadAnchorNode = document.createElement('a')
-    downloadAnchorNode.setAttribute("href", dataStr)
-    downloadAnchorNode.setAttribute("download", `backup_${new Date().toISOString().split('T')[0]}.json`)
-    document.body.appendChild(downloadAnchorNode)
-    downloadAnchorNode.click()
-    downloadAnchorNode.remove()
-  }
-
-  const restoreData = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      const data = JSON.parse(e.target.result)
-      if (confirm(`Restore ${data.customers?.length} customers?`)) {
-        for (const c of data.customers) { delete c.id; await supabase.from('customers').insert([c]) }
-        for (const b of data.bills) { delete b.id; await supabase.from('bills').insert([b]) }
-        fetchData()
-        alert('Restored!')
-      }
-    }
-    reader.readAsText(file)
+    XLSX.utils.book_append_sheet(wb, ws, "Route")
+    XLSX.writeFile(wb, `Report_${currentDay}.xlsx`)
   }
 
   return (
@@ -135,13 +96,9 @@ export default function Dashboard() {
         <button className="btn-small" onClick={exportToExcel} style={{ background: '#667eea' }}>
           📊 <span className="btn-text">Export</span>
         </button>
-        <button className="btn-small" onClick={backupData}>
-          💾 <span className="btn-text">Backup</span>
+        <button className="btn-small" onClick={() => window.location.reload()}>
+          🔄 <span className="btn-text">Refresh</span>
         </button>
-        <label className="btn-small" style={{ cursor: 'pointer' }}>
-          🔄 <span className="btn-text">Restore</span>
-          <input type="file" style={{ display: 'none' }} onChange={restoreData} accept=".json" />
-        </label>
       </Header>
       
       <DayScroller currentDay={currentDay} onDayChange={setCurrentDay} />
@@ -149,33 +106,33 @@ export default function Dashboard() {
       <div className="search-container">
         <input 
           type="text" 
-          placeholder="Search by Name or Mobile..."
+          placeholder="🔍 Search Customer..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      <div className="container" style={{ paddingBottom: 80 }}>
+      <div className="container">
         <Stats count={filteredCustomers.length} pending={totalPending} />
         
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>Loading...</div>
+          <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>Loading...</div>
         ) : filteredCustomers.length === 0 ? (
           <div className="empty-state">
-            <p>No customers found for {currentDay}</p>
-            <button className="btn-small" onClick={handleAddNew} style={{ marginTop: 10 }}>
-              Add First Customer
+            <p>No customers found for {currentDay}.</p>
+            <button className="btn-small" onClick={handleAddNew} style={{ marginTop: 15 }}>
+              + Add Customer to {currentDay}
             </button>
           </div>
         ) : (
-          <table id="shopperTable">
+          <table>
             <thead>
               <tr>
                 <th style={{ width: 50 }}>Sr.</th>
                 <th>Name</th>
                 <th>Mobile</th>
                 <th style={{ width: 80 }}>Pending</th>
-                <th style={{ width: 90 }}>Action</th>
+                <th style={{ width: 70 }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -184,7 +141,7 @@ export default function Dashboard() {
                   key={customer.id} 
                   customer={customer} 
                   pending={getPendingAmount(customer.id)}
-                  onEdit={() => handleEditCustomer(customer)} // Pass edit handler
+                  onEdit={() => handleEditCustomer(customer)}
                 />
               ))}
             </tbody>
@@ -198,7 +155,8 @@ export default function Dashboard() {
         isOpen={showModal} 
         onClose={() => setShowModal(false)}
         onSuccess={fetchData}
-        editCustomer={editingCustomer} // Pass the customer to edit
+        editCustomer={editingCustomer}
+        defaultDay={currentDay} /* FIX 3: Pass the current day to the modal */
       />
     </div>
   )
