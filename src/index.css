@@ -404,18 +404,32 @@ label {
     justify-content: center;
   }
 
-  /* 3. Table Readability */
+  /* 3. Table Layout & Spacing */
   th, td { 
-    padding: 12px 10px; 
-    font-size: 14px; 
+    padding: 12px 4px; /* Reduced side padding to fit content */
+    font-size: 13px;   /* Slightly smaller font */
   }
   
-  /* 4. Fix Amount Sizes */
+  /* 4. Fix Long Names (The Key Fix) */
+  tr td:nth-child(2) {
+    max-width: 85px;        /* Force a width limit */
+    white-space: normal;    /* Allow text to wrap */
+    word-wrap: break-word;  /* Break very long words */
+    line-height: 1.2;       /* Tighter line height for wrapped text */
+  }
+
+  /* 5. Mobile Column Adjustments */
+  tr td:nth-child(3) { 
+    max-width: 80px;        /* Limit mobile number column */
+    word-break: break-all;
+  }
+  
+  /* 6. Fix Amount Sizes */
   .amount-red, .amount-green { 
     font-size: 2rem; 
   }
   
-  /* 5. Keep Empty State Button Normal */
+  /* 7. Keep Empty State Button Normal */
   .empty-state .btn-small {
     width: auto;
     height: auto;
