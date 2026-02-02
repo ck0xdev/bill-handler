@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
-export default function CustomerCard({ customer, pending }) {
+export default function CustomerCard({ customer, pending, onEdit }) {
   const navigate = useNavigate()
   
   return (
@@ -14,7 +14,15 @@ export default function CustomerCard({ customer, pending }) {
       }}>
         ₹{pending.toLocaleString()}
       </td>
-      <td>
+      <td style={{ display: 'flex', gap: '5px' }}>
+        {/* FIX 2: Edit Button added here */}
+        <button className="btn-view" style={{background: '#fff3cd', color:'#856404'}} onClick={(e) => {
+          e.stopPropagation()
+          onEdit(customer)
+        }}>
+          ✎
+        </button>
+        
         <button className="btn-view" onClick={(e) => {
           e.stopPropagation()
           navigate(`/customer/${customer.id}`)

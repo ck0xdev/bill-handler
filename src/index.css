@@ -282,9 +282,13 @@ tr:hover { background-color: #f8f9fa; }
   margin-top: 10px;
 }
 
-/* Modal */
+/* ... existing code ... */
+
+/* Modal - Centered Layout */
 .modal { 
-  display: none; 
+  display: flex !important; /* Forces centering, overrides inline styles */
+  justify-content: center;  /* Center horizontally */
+  align-items: center;      /* Center vertically */
   position: fixed; 
   z-index: 200; 
   left: 0; 
@@ -294,17 +298,19 @@ tr:hover { background-color: #f8f9fa; }
   background-color: rgba(0,0,0,0.5); 
   backdrop-filter: blur(4px);
 }
+
 .modal-content { 
   background-color: #fff; 
-  margin: 10% auto; 
+  margin: 0; /* Removed the top margin */
   padding: 25px; 
   border-radius: 16px; 
   width: 90%; 
   max-width: 400px; 
   position: relative; 
-  animation: slideIn 0.3s ease-out;
+  animation: zoomIn 0.3s ease-out; /* Changed to a nice pop-in zoom */
   box-shadow: 0 20px 40px rgba(0,0,0,0.2);
 }
+
 .close-btn { 
   position: absolute; 
   right: 20px; 
@@ -312,9 +318,17 @@ tr:hover { background-color: #f8f9fa; }
   font-size: 28px; 
   cursor: pointer; 
   color: #999;
+  transition: color 0.2s;
 }
 .close-btn:hover { color: #333; }
 
+/* New Animation for Centered Modal */
+@keyframes zoomIn { 
+  from {transform: scale(0.9); opacity: 0;} 
+  to {transform: scale(1); opacity: 1;} 
+}
+
+/* ... existing responsive code ... */
 /* Form */
 .input-field { 
   width: 100%; 

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 
-export default function AddCustomerModal({ isOpen, onClose, onSuccess }) {
+export default function AddCustomerModal({ isOpen, onClose, onSuccess, editCustomer = null }) {
   const [formData, setFormData] = useState({
     name: '',
     mobile: '',
@@ -10,7 +10,21 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }) {
   })
   const [loading, setLoading] = useState(false)
 
-  // Full names for dropdown
+  // FIX 2: Load customer data if in Edit Mode
+  useEffect(() => {
+    if (editCustomer) {
+      setFormData({
+        name: editCustomer.name,
+        mobile: editCustomer.mobile || '',
+        route_day: editCustomer.route_day,
+        sr_no: editCustomer.sr_no
+      })
+    } else {
+      // Reset for new customer
+      setFormData({ name: '', mobile: '', route_day: 'Mon', sr_no: '' })
+    }
+  }, [editCustomer, isOpen])
+
   const days = [
     { value: 'Mon', label: 'Monday' },
     { value: 'Tue', label: 'Tuesday' },
@@ -27,21 +41,34 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault()
     setLoading(true)
     
-    const { error } = await supabase
-      .from('customers')
-      .insert([{
-        name: formData.name,
-        mobile: formData.mobile,
-        route_day: formData.route_day,
-        sr_no: parseInt(formData.sr_no) || 0
-      }])
+    const payload = {
+      name: formData.name,
+      mobile: formData.mobile,
+      route_day: formData.route_day,
+      sr_no: parseInt(formData.sr_no) || 0
+    }
+
+    let error
+    
+    // FIX 2: Logic to Update or Insert
+    if (editCustomer) {
+      const { error: updateError } = await supabase
+        .from('customers')
+        .update(payload)
+        .eq('id', editCustomer.id)
+      error = updateError
+    } else {
+      const { error: insertError } = await supabase
+        .from('customers')
+        .insert([payload])
+      error = insertError
+    }
 
     setLoading(false)
     
     if (error) {
       alert(error.message)
     } else {
-      setFormData({ name: '', mobile: '', route_day: 'Mon', sr_no: '' })
       onSuccess()
       onClose()
     }
@@ -51,7 +78,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }) {
     <div className="modal" style={{ display: 'block' }}>
       <div className="modal-content">
         <span className="close-btn" onClick={onClose}>&times;</span>
-        <h2>Add New Customer</h2>
+        <h2>{editCustomer ? 'Edit Customer' : 'Add New Customer'}</h2>
         <form onSubmit={handleSubmit}>
           <label>Route Day:</label>
           <select 
@@ -95,7 +122,7 @@ export default function AddCustomerModal({ isOpen, onClose, onSuccess }) {
           />
           
           <button type="submit" className="btn-save" disabled={loading}>
-            {loading ? 'Saving...' : 'Save Customer'}
+            {loading ? 'Saving...' : (editCustomer ? 'Update Details' : 'Save Customer')}
           </button>
         </form>
       </div>
