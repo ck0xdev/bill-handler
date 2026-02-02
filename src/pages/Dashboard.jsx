@@ -6,24 +6,32 @@ import DayScroller from '../components/DayScroller'
 import Stats from '../components/Stats'
 import CustomerCard from '../components/CustomerCard'
 import AddCustomerModal from '../components/Modals/AddCustomerModal'
+import PaymentModal from '../components/Modals/PaymentModal'
+import HistoryModal from '../components/Modals/HistoryModal'
 
 export default function Dashboard() {
-  // FIX 1: Load day from LocalStorage (Memory) so it never resets to Mon automatically
+  // FIX 1: Load day from LocalStorage so it stays selected on reload
   const [currentDay, setCurrentDay] = useState(() => {
     return localStorage.getItem('bill_handler_day') || 'Mon'
   })
   
   const [customers, setCustomers] = useState([])
   const [bills, setBills] = useState([])
+  
+  // Daily Collection State
+  const [dailyTransactions, setDailyTransactions] = useState([])
+  const [showHistory, setShowHistory] = useState(false)
+
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [showPayModal, setShowPayModal] = useState(false)
+  
   const [loading, setLoading] = useState(true)
   const [editingCustomer, setEditingCustomer] = useState(null)
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
 
   useEffect(() => {
-    // FIX 2: Save the day whenever it changes
     localStorage.setItem('bill_handler_day', currentDay)
-    
     fetchData()
     
     const subscription = supabase
@@ -37,24 +45,34 @@ export default function Dashboard() {
 
   async function fetchData() {
     setLoading(true)
+    
+    // 1. Fetch Customers
     const { data: customersData } = await supabase
       .from('customers')
       .select('*')
       .eq('route_day', currentDay)
       .order('sr_no', { ascending: true })
-    
     setCustomers(customersData || [])
     
+    // 2. Fetch Bills
     if (customersData && customersData.length > 0) {
       const ids = customersData.map(c => c.id)
-      const { data: billsData } = await supabase
-        .from('bills')
-        .select('*')
-        .in('customer_id', ids)
+      const { data: billsData } = await supabase.from('bills').select('*').in('customer_id', ids)
       setBills(billsData || [])
     } else {
       setBills([])
     }
+
+    // 3. Fetch Today's Payments
+    const today = new Date().toISOString().split('T')[0]
+    const { data: historyData } = await supabase
+      .from('bills')
+      .select('*, customers(name)')
+      .eq('date', today)
+      .gt('paid_amount', 0)
+    
+    setDailyTransactions(historyData || [])
+
     setLoading(false)
   }
 
@@ -65,6 +83,7 @@ export default function Dashboard() {
   }
 
   const totalPending = customers.reduce((sum, c) => sum + getPendingAmount(c.id), 0)
+  const totalCollected = dailyTransactions.reduce((sum, t) => sum + (t.paid_amount || 0), 0)
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -74,6 +93,11 @@ export default function Dashboard() {
   const handleEditCustomer = (customer) => {
     setEditingCustomer(customer)
     setShowModal(true)
+  }
+
+  const handlePay = (customer) => {
+    setSelectedCustomer(customer)
+    setShowPayModal(true)
   }
 
   const handleAddNew = () => {
@@ -93,10 +117,18 @@ export default function Dashboard() {
   return (
     <div>
       <Header>
-        <button className="btn-small" onClick={exportToExcel} style={{ background: '#667eea' }}>
+        {/* BUTTON 1: Today's Payment */}
+        <button className="btn-small" onClick={() => setShowHistory(true)} style={{ background: '#28a745' }} title="View Today's Collection">
+          💰 <span className="btn-text">Payments</span>
+        </button>
+
+        {/* BUTTON 2: Export */}
+        <button className="btn-small" onClick={exportToExcel} style={{ background: '#667eea' }} title="Export to Excel">
           📊 <span className="btn-text">Export</span>
         </button>
-        <button className="btn-small" onClick={() => window.location.reload()}>
+
+        {/* BUTTON 3: Refresh */}
+        <button className="btn-small" onClick={() => window.location.reload()} style={{ background: '#333' }} title="Reload App">
           🔄 <span className="btn-text">Refresh</span>
         </button>
       </Header>
@@ -104,16 +136,11 @@ export default function Dashboard() {
       <DayScroller currentDay={currentDay} onDayChange={setCurrentDay} />
       
       <div className="search-container">
-        <input 
-          type="text" 
-          placeholder="🔍 Search Customer..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <input type="text" placeholder="🔍 Search Customer..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
       </div>
 
-      <div className="container">
-        <Stats count={filteredCustomers.length} pending={totalPending} />
+      <div className="container" style={{ paddingBottom: 80 }}>
+        <Stats count={filteredCustomers.length} pending={totalPending} collected={totalCollected} />
         
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>Loading...</div>
@@ -121,18 +148,18 @@ export default function Dashboard() {
           <div className="empty-state">
             <p>No customers found for {currentDay}.</p>
             <button className="btn-small" onClick={handleAddNew} style={{ marginTop: 15 }}>
-              + Add Customer to {currentDay}
+              + Add Customer
             </button>
           </div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th style={{ width: 50 }}>Sr.</th>
+                <th style={{ width: 40 }}>Sr.</th>
                 <th>Name</th>
                 <th>Mobile</th>
                 <th style={{ width: 80 }}>Pending</th>
-                <th style={{ width: 70 }}>Action</th>
+                <th style={{ width: 100 }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -142,6 +169,7 @@ export default function Dashboard() {
                   customer={customer} 
                   pending={getPendingAmount(customer.id)}
                   onEdit={() => handleEditCustomer(customer)}
+                  onPay={() => handlePay(customer)}
                 />
               ))}
             </tbody>
@@ -151,12 +179,27 @@ export default function Dashboard() {
 
       <button className="fab-btn" onClick={handleAddNew}>+</button>
       
+      {/* Modals */}
       <AddCustomerModal 
         isOpen={showModal} 
-        onClose={() => setShowModal(false)}
+        onClose={() => setShowModal(false)} 
+        onSuccess={fetchData} 
+        editCustomer={editingCustomer} 
+        defaultDay={currentDay}
+      />
+      
+      <PaymentModal 
+        isOpen={showPayModal}
+        onClose={() => setShowPayModal(false)}
         onSuccess={fetchData}
-        editCustomer={editingCustomer}
-        defaultDay={currentDay} /* FIX 3: Pass the current day to the modal */
+        customer={selectedCustomer}
+      />
+
+      <HistoryModal 
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        date={new Date().toLocaleDateString('en-GB')}
+        transactions={dailyTransactions}
       />
     </div>
   )
