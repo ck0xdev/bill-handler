@@ -52,9 +52,10 @@ export default function Details() {
     const printWindow = window.open('', '', 'width=800,height=600')
     const rows = bills.map(b => {
       const bal = parseFloat(b.total_amount) - parseFloat(b.paid_amount)
+      // CHANGED: Date format in Print View
       return `<tr>
         <td style="border:1px solid #ddd;padding:8px">${b.bill_no}</td>
-        <td style="border:1px solid #ddd;padding:8px">${new Date(b.date).toLocaleDateString()}</td>
+        <td style="border:1px solid #ddd;padding:8px">${new Date(b.date).toLocaleDateString('en-GB')}</td>
         <td style="border:1px solid #ddd;padding:8px;text-align:right">₹${parseFloat(b.total_amount).toLocaleString()}</td>
         <td style="border:1px solid #ddd;padding:8px;text-align:right">₹${parseFloat(b.paid_amount).toLocaleString()}</td>
         <td style="border:1px solid #ddd;padding:8px;text-align:right">₹${bal.toLocaleString()}</td>
@@ -67,8 +68,7 @@ export default function Details() {
       <body style="font-family:Arial;padding:20px">
         <h2 style="color:#667eea;text-align:center">CUSTOMER STATEMENT</h2>
         <p><strong>Customer:</strong> ${customer?.name}</p>
-        <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-        <table style="width:100%;border-collapse:collapse;margin-top:20px">
+        <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-GB')}</p> <table style="width:100%;border-collapse:collapse;margin-top:20px">
           <thead style="background:#667eea;color:white">
             <tr>
               <th style="padding:10px;text-align:left">Bill No</th>
@@ -96,6 +96,7 @@ export default function Details() {
   return (
     <div>
       <Header title={customer.name} />
+      
       <div className="details-header" style={{ marginTop: -60, paddingTop: 80 }}>
         <div className="meta-info" style={{ marginTop: 10 }}>
           <span>Sr: {customer.sr_no}</span> | 
@@ -105,6 +106,7 @@ export default function Details() {
           </span>
         </div>
       </div>
+
       <div className="summary-card">
         <h3>Total Pending Amount</h3>
         <h1 className={totalPending > 0 ? 'amount-red' : 'amount-green'} style={{ fontSize: '2.5rem' }}>
@@ -112,10 +114,12 @@ export default function Details() {
         </h1>
         {bills.length > 0 && (
           <p style={{ color: '#666', marginTop: 5 }}>
-            Last: {bills[0].bill_no} on {new Date(bills[0].date).toLocaleDateString()}
+            {/* CHANGED: Date format in Summary Card */}
+            Last: {bills[0].bill_no} on {new Date(bills[0].date).toLocaleDateString('en-GB')}
           </p>
         )}
       </div>
+
       <div className="container">
         <div className="section-header">
           <h3>Bill History</h3>
@@ -128,6 +132,7 @@ export default function Details() {
             </button>
           </div>
         </div>
+
         {bills.length === 0 ? (
           <div className="empty-state">No bills yet. Add your first bill!</div>
         ) : (
@@ -136,6 +141,7 @@ export default function Details() {
           ))
         )}
       </div>
+
       <BillModal 
         isOpen={showModal}
         onClose={handleCloseModal}

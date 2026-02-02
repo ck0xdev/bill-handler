@@ -7,7 +7,8 @@ export default function BillCard({ bill, onEdit }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
         <strong style={{ color: '#667eea' }}>{bill.bill_no}</strong>
         <span style={{ color: '#666', fontSize: '0.9rem' }}>
-          {new Date(bill.date).toLocaleDateString()}
+          {/* CHANGED: Added 'en-GB' for DD/MM/YYYY format */}
+          {new Date(bill.date).toLocaleDateString('en-GB')}
         </span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
